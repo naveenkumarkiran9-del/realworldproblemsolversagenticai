@@ -10,33 +10,92 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as JournalRouteImport } from './routes/journal'
+import { Route as MarketRouteImport } from './routes/market'
+import { Route as PaperTradingRouteImport } from './routes/paper-trading'
+import { Route as RiskRouteImport } from './routes/risk'
+import { Route as StrategyLabRouteImport } from './routes/strategy-lab'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const JournalRoute = JournalRouteImport.update({
+  id: '/journal',
+  path: '/journal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MarketRoute = MarketRouteImport.update({
+  id: '/market',
+  path: '/market',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PaperTradingRoute = PaperTradingRouteImport.update({
+  id: '/paper-trading',
+  path: '/paper-trading',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RiskRoute = RiskRouteImport.update({
+  id: '/risk',
+  path: '/risk',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StrategyLabRoute = StrategyLabRouteImport.update({
+  id: '/strategy-lab',
+  path: '/strategy-lab',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/journal': typeof JournalRoute
+  '/market': typeof MarketRoute
+  '/paper-trading': typeof PaperTradingRoute
+  '/risk': typeof RiskRoute
+  '/strategy-lab': typeof StrategyLabRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/journal': typeof JournalRoute
+  '/market': typeof MarketRoute
+  '/paper-trading': typeof PaperTradingRoute
+  '/risk': typeof RiskRoute
+  '/strategy-lab': typeof StrategyLabRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/journal': typeof JournalRoute
+  '/market': typeof MarketRoute
+  '/paper-trading': typeof PaperTradingRoute
+  '/risk': typeof RiskRoute
+  '/strategy-lab': typeof StrategyLabRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    '/' | '/journal' | '/market' | '/paper-trading' | '/risk' | '/strategy-lab'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    '/' | '/journal' | '/market' | '/paper-trading' | '/risk' | '/strategy-lab'
+  id:
+    | '__root__'
+    | '/'
+    | '/journal'
+    | '/market'
+    | '/paper-trading'
+    | '/risk'
+    | '/strategy-lab'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  JournalRoute: typeof JournalRoute
+  MarketRoute: typeof MarketRoute
+  PaperTradingRoute: typeof PaperTradingRoute
+  RiskRoute: typeof RiskRoute
+  StrategyLabRoute: typeof StrategyLabRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +107,51 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/journal': {
+      id: '/journal'
+      path: '/journal'
+      fullPath: '/journal'
+      preLoaderRoute: typeof JournalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/market': {
+      id: '/market'
+      path: '/market'
+      fullPath: '/market'
+      preLoaderRoute: typeof MarketRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/paper-trading': {
+      id: '/paper-trading'
+      path: '/paper-trading'
+      fullPath: '/paper-trading'
+      preLoaderRoute: typeof PaperTradingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/risk': {
+      id: '/risk'
+      path: '/risk'
+      fullPath: '/risk'
+      preLoaderRoute: typeof RiskRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/strategy-lab': {
+      id: '/strategy-lab'
+      path: '/strategy-lab'
+      fullPath: '/strategy-lab'
+      preLoaderRoute: typeof StrategyLabRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  JournalRoute: JournalRoute,
+  MarketRoute: MarketRoute,
+  PaperTradingRoute: PaperTradingRoute,
+  RiskRoute: RiskRoute,
+  StrategyLabRoute: StrategyLabRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
