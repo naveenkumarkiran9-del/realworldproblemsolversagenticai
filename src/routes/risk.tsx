@@ -47,7 +47,7 @@ const SLIDERS: { key: keyof Omit<RiskLimits, "requireStopLoss">; label: string; 
 function RiskPage() {
   const t = useTrading();
   const [dryRun, setDryRun] = useState<{ label: string; trade: ProposedTrade; evaluation: RiskEvaluation } | null>(null);
-  const largest = Math.max(0, ...Object.values(t.positions.reduce<Record<string, number>>((m, p) => ({ ...m, [p.symbol]: (m[p.symbol] ?? 0) + p.qty * t.prices[p.symbol] }), {})));
+  const largest = Math.max(0, ...Object.values(t.positions.reduce<Record<string, number>>((m, p) => ({ ...m, [p.symbol]: (m[p.symbol] ?? 0) + p.qty * (t.prices[p.symbol] ?? p.entryPrice) }), {})));
 
   const usage = [
     { label: "Portfolio exposure", used: t.invested, limit: (t.limits.maxExposurePct / 100) * t.equity },
