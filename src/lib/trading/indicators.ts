@@ -1,3 +1,4 @@
+import { at } from "./market-data";
 import type { PricePoint, StrategyId } from "./types";
 
 export function sma(values: number[], period: number): number {
@@ -16,7 +17,7 @@ export function rsi(values: number[], period = 14): number {
   let gains = 0;
   let losses = 0;
   for (let i = 1; i < slice.length; i++) {
-    const d = slice[i] - slice[i - 1];
+    const d = at(slice, i) - at(slice, i - 1);
     if (d > 0) gains += d;
     else losses -= d;
   }
@@ -29,14 +30,14 @@ export function rsi(values: number[], period = 14): number {
 export function atr(values: number[], period = 14): number {
   const slice = values.slice(-(period + 1));
   let sum = 0;
-  for (let i = 1; i < slice.length; i++) sum += Math.abs(slice[i] - slice[i - 1]);
+  for (let i = 1; i < slice.length; i++) sum += Math.abs(at(slice, i) - at(slice, i - 1));
   return sum / (slice.length - 1);
 }
 
 /** Annualised volatility, %. */
 export function volatility(values: number[], period = 20): number {
   const slice = values.slice(-(period + 1));
-  const rets = slice.slice(1).map((v, i) => Math.log(v / slice[i]));
+  const rets = slice.slice(1).map((v, i) => Math.log(v / at(slice, i)));
   const mean = rets.reduce((a, b) => a + b, 0) / rets.length;
   const variance = rets.reduce((a, b) => a + (b - mean) ** 2, 0) / rets.length;
   return Math.sqrt(variance) * Math.sqrt(252) * 100;
@@ -46,7 +47,7 @@ export function zScore(values: number[], period = 20): number {
   const slice = values.slice(-period);
   const mean = slice.reduce((a, b) => a + b, 0) / slice.length;
   const sd = Math.sqrt(slice.reduce((a, b) => a + (b - mean) ** 2, 0) / slice.length);
-  return sd === 0 ? 0 : (values[values.length - 1] - mean) / sd;
+  return sd === 0 ? 0 : (at(values, -1) - mean) / sd;
 }
 
 export interface Indicators {
@@ -63,8 +64,8 @@ export interface Indicators {
 
 export function computeIndicators(history: PricePoint[]): Indicators {
   const closes = history.map((p) => p.close);
-  const price = closes[closes.length - 1];
-  const p30 = closes[closes.length - 31];
+  const price = at(closes, -1);
+  const p30 = at(closes, -31);
   return {
     price,
     sma20: sma(closes, 20),

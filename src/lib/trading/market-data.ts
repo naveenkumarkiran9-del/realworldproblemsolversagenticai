@@ -84,7 +84,14 @@ export const STOCKS: Stock[] = PROFILES.map((p) => ({
   history: generate(p),
 }));
 
-export const DEMO_AS_OF = DATES[DATES.length - 1];
+export const DEMO_AS_OF = at(DATES, -1);
+
+/** Index into a list that must contain the item (negative counts from the end). */
+export function at<T>(arr: readonly T[], i: number): T {
+  const v = arr[i < 0 ? arr.length + i : i];
+  if (v === undefined) throw new Error(`Index ${i} out of range (length ${arr.length})`);
+  return v;
+}
 
 export function getStock(symbol: string): Stock {
   const s = STOCKS.find((x) => x.symbol === symbol);
@@ -92,32 +99,43 @@ export function getStock(symbol: string): Stock {
   return s;
 }
 
+export function isDemoSymbol(symbol: string): boolean {
+  return STOCKS.some((x) => x.symbol === symbol);
+}
+
 export function lastPrice(symbol: string): number {
-  const h = getStock(symbol).history;
-  return h[h.length - 1].close;
+  return at(getStock(symbol).history, -1).close;
 }
 
 export function dayChange(symbol: string): { abs: number; pct: number } {
   const h = getStock(symbol).history;
-  const a = h[h.length - 1].close;
-  const b = h[h.length - 2].close;
+  const a = at(h, -1).close;
+  const b = at(h, -2).close;
   return { abs: a - b, pct: ((a - b) / b) * 100 };
 }
 
-export const PRICE_MAP: Record<string, number> = Object.fromEntries(
-  STOCKS.map((s) => [s.symbol, s.history[s.history.length - 1].close]),
+export const PRICE_MAP: Readonly<Record<string, number>> = Object.fromEntries(
+  STOCKS.map((s) => [s.symbol, at(s.history, -1).close]),
 );
+
+/**
+ * Current demo price for a symbol. Unknown symbols return NaN, which the
+ * Risk Governor rejects as invalid input and the UI shows as "—".
+ */
+export function priceOf(symbol: string): number {
+  return PRICE_MAP[symbol] ?? Number.NaN;
+}
 
 /** Synthetic equity curve (demo) ending at the supplied current equity. */
 export function equityCurve(currentEquity: number, start = 100_000) {
   const rand = mulberry32(991);
   const n = 60;
   const raw: number[] = [start];
-  for (let i = 1; i < n; i++) raw.push(raw[i - 1] * (1 + 0.0009 + (rand() - 0.5) * 0.012));
-  const scale = (currentEquity - start) / (raw[n - 1] - start || 1);
+  for (let i = 1; i < n; i++) raw.push(at(raw, i - 1) * (1 + 0.0009 + (rand() - 0.5) * 0.012));
+  const scale = (currentEquity - start) / (at(raw, n - 1) - start || 1);
   const dates = DATES.slice(-n);
   return raw.map((v, i) => ({
-    date: dates[i],
+    date: at(dates, i),
     value: Math.round(i === n - 1 ? currentEquity : start + (v - start) * scale),
   }));
 }
