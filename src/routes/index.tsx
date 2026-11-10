@@ -115,7 +115,7 @@ function Overview() {
           <ul className="divide-y">
             {STOCKS.slice(0, 6).map((s) => {
               const ch = dayChange(s.symbol);
-              const last = s.history[s.history.length - 1].close;
+              const last = s.history.at(-1)?.close;
               return (
                 <li key={s.symbol} className="flex items-center gap-3 py-2">
                   <div className="w-16">

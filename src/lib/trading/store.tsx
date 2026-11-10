@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { getStock, PRICE_MAP } from "./market-data";
+import { at, getStock, PRICE_MAP, priceOf } from "./market-data";
 import { DEFAULT_LIMITS, evaluateTrade, exposure, portfolioEquity } from "./risk";
 import type { JournalEntry, Position, ProposedTrade, RiskEvaluation, RiskLimits, StrategyId } from "./types";
 
@@ -29,7 +29,7 @@ export interface DraftOrder {
 
 const closeAt = (symbol: string, back: number) => {
   const h = getStock(symbol).history;
-  return h[h.length - 1 - back];
+  return at(h, h.length - 1 - back);
 };
 
 interface Seed {
@@ -272,7 +272,7 @@ export function TradingProvider({ children }: { children: ReactNode }) {
       const lot = stateRef.current.positions.find((p) => p.id === positionId);
       if (!lot) throw new Error("Position not found");
       return submitTrade(
-        { symbol: lot.symbol, side: "SELL", qty: lot.qty, entryPrice: prices[lot.symbol], stopLoss: null, takeProfit: null, strategy: lot.strategy },
+        { symbol: lot.symbol, side: "SELL", qty: lot.qty, entryPrice: priceOf(lot.symbol), stopLoss: null, takeProfit: null, strategy: lot.strategy },
         { source: "Manual", aiExplanation: "Position closed manually at the current demo price." },
       ).evaluation;
     },
@@ -284,7 +284,7 @@ export function TradingProvider({ children }: { children: ReactNode }) {
     const invested = exposure({ positions: state.positions, prices });
     const closed = state.journal.filter((j) => j.status === "Closed" && j.pnl !== null);
     const realizedPnl = closed.reduce((a, j) => a + (j.pnl as number), 0);
-    const unrealizedPnl = state.positions.reduce((a, p) => a + (prices[p.symbol] - p.entryPrice) * p.qty, 0);
+    const unrealizedPnl = state.positions.reduce((a, p) => a + ((prices[p.symbol] ?? p.entryPrice) - p.entryPrice) * p.qty, 0);
     const wins = closed.filter((j) => (j.pnl as number) > 0).length;
     return {
       ...state,

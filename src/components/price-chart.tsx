@@ -20,7 +20,7 @@ function TooltipBox({ active, payload, label, money = true }: { active?: boolean
 }
 
 export function EquityChart({ data, height = 260 }: { data: { date: string; value: number }[]; height?: number }) {
-  const up = data[data.length - 1].value >= data[0].value;
+  const up = (data.at(-1)?.value ?? 0) >= (data[0]?.value ?? 0);
   const color = up ? "var(--success)" : "var(--destructive)";
   return (
     <div style={{ height }}>
@@ -44,7 +44,7 @@ export function EquityChart({ data, height = 260 }: { data: { date: string; valu
 }
 
 export function StockChart({ data, height = 320 }: { data: { date: string; close: number; sma20: number | null; sma50: number | null; volume: number }[]; height?: number }) {
-  const up = data[data.length - 1].close >= data[0].close;
+  const up = (data.at(-1)?.close ?? 0) >= (data[0]?.close ?? 0);
   const color = up ? "var(--success)" : "var(--destructive)";
   const maxVol = Math.max(...data.map((d) => d.volume));
   return (
@@ -73,10 +73,11 @@ export function StockChart({ data, height = 320 }: { data: { date: string; close
 }
 
 export function Sparkline({ values, height = 36 }: { values: number[]; height?: number }) {
-  const up = values[values.length - 1] >= values[0];
+  const first = values[0] ?? 0;
+  const up = (values.at(-1) ?? 0) >= first;
   const data = values.map((v, i) => ({ i, v }));
   const color = up ? "var(--success)" : "var(--destructive)";
-  const id = `sp-${Math.round(values[0] * 100)}-${values.length}-${up ? 1 : 0}`;
+  const id = `sp-${Math.round(first * 100)}-${values.length}-${up ? 1 : 0}`;
   return (
     <div style={{ height }} className="w-full">
       <ResponsiveContainer width="100%" height="100%">

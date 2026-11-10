@@ -41,7 +41,7 @@ function MarketPage() {
     const closes = stock.history.map((p) => p.close);
     const s20 = smaSeries(closes, 20);
     const s50 = smaSeries(closes, 50);
-    return stock.history.map((p, i) => ({ ...p, sma20: s20[i], sma50: s50[i] })).slice(-range);
+    return stock.history.map((p, i) => ({ ...p, sma20: s20[i] ?? null, sma50: s50[i] ?? null })).slice(-range);
   }, [stock, range]);
 
   const filtered = STOCKS.filter((s) => (s.symbol + s.name + s.sector).toLowerCase().includes(query.toLowerCase()));
@@ -84,7 +84,7 @@ function MarketPage() {
                       <div className="text-[11px] text-muted-foreground">{s.name}</div>
                     </div>
                     <div className="text-right">
-                      <div className="num text-sm font-medium">{usd(s.history[s.history.length - 1].close)}</div>
+                      <div className="num text-sm font-medium">{usd(s.history.at(-1)?.close)}</div>
                       <div className="text-[11px]">
                         <Delta value={ch.pct} />
                       </div>

@@ -28,3 +28,7 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+## Project rules
+- Demo trading logic lives in pure modules under `src/lib/trading/` (data, indicators, strategies, Risk Governor); UI state is a browser-only context store persisted to localStorage. Why: no backend needed for the paper-trading prototype, and the risk rules stay unit-testable.
+- Read demo prices with `priceOf()` / `at()` from `market-data.ts`, never raw index lookups. Why: an unknown symbol must show "—" and fail the Risk Governor's input check instead of crashing a page.

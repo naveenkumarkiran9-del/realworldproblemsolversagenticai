@@ -111,5 +111,5 @@ function finish(checks: RiskCheck[], rejection?: string): RiskEvaluation {
     return { approved: true, checks, explanation: "Trade approved: all risk checks passed. Executing in the paper-trading simulator only." };
   }
   const extra = failed.length > 1 ? ` (${failed.length} checks failed)` : "";
-  return { approved: false, checks, explanation: (rejection ?? `Trade rejected: ${failed[0].label.toLowerCase()} failed.`) + extra };
+  return { approved: false, checks, explanation: (rejection ?? `Trade rejected: ${failed[0]?.label.toLowerCase() ?? "a risk check"} failed.`) + extra };
 }

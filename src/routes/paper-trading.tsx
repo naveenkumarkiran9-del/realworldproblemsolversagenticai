@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { PageHeader, Panel, StatCard } from "@/components/page-header";
 import { DecisionBanner, RiskChecksList } from "@/components/risk-checks";
 import { dateTime, signedUsd, usd } from "@/lib/format";
-import { STOCKS } from "@/lib/trading/market-data";
+import { isDemoSymbol, priceOf, STOCKS } from "@/lib/trading/market-data";
 import { useTrading } from "@/lib/trading/store";
 import { STRATEGY_NAMES, type RiskEvaluation, type StrategyId } from "@/lib/trading/types";
 
@@ -31,16 +31,18 @@ function PaperTrading() {
   const [side, setSide] = useState<"BUY" | "SELL">("BUY");
   const [symbol, setSymbol] = useState("AAPL");
   const [qty, setQty] = useState("10");
-  const [entry, setEntry] = useState(String(t.prices.AAPL));
-  const [stop, setStop] = useState(String(Math.round(t.prices.AAPL * 0.96 * 100) / 100));
-  const [tp, setTp] = useState(String(Math.round(t.prices.AAPL * 1.08 * 100) / 100));
+  const [entry, setEntry] = useState(String(priceOf("AAPL")));
+  const [stop, setStop] = useState(String(Math.round(priceOf("AAPL") * 0.96 * 100) / 100));
+  const [tp, setTp] = useState(String(Math.round(priceOf("AAPL") * 1.08 * 100) / 100));
   const [strategy, setStrategy] = useState<StrategyId>("manual");
   const [result, setResult] = useState<RiskEvaluation | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
 
   const applySymbol = (s: string) => {
+    // The dropdown can report an empty value (e.g. on form reset); ignore anything that isn't a demo stock.
+    if (!isDemoSymbol(s)) return;
     setSymbol(s);
-    const p = t.prices[s];
+    const p = priceOf(s);
     setEntry(String(p));
     setStop(String(Math.round(p * 0.96 * 100) / 100));
     setTp(String(Math.round(p * 1.08 * 100) / 100));
@@ -135,11 +137,11 @@ function PaperTrading() {
                   <SelectTrigger aria-label="Stock"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {STOCKS.map((s) => (
-                      <SelectItem key={s.symbol} value={s.symbol}>{s.symbol} · {usd(t.prices[s.symbol])}</SelectItem>
+                      <SelectItem key={s.symbol} value={s.symbol}>{s.symbol} · {usd(priceOf(s.symbol))}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-[11px] text-muted-foreground">Holding {held} share(s) · demo price {usd(t.prices[symbol])}</p>
+                <p className="text-[11px] text-muted-foreground">Holding {held} share(s) · demo price {usd(priceOf(symbol))}</p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <Field id="qty" label="Quantity" value={qty} onChange={setQty} step="1" />
@@ -194,7 +196,7 @@ function PaperTrading() {
                   </thead>
                   <tbody>
                     {t.positions.map((p) => {
-                      const price = t.prices[p.symbol];
+                      const price = priceOf(p.symbol);
                       const pnl = (price - p.entryPrice) * p.qty;
                       return (
                         <tr key={p.id} className="border-t">

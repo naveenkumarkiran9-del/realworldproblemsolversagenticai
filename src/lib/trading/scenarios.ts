@@ -1,5 +1,5 @@
 import { analyzeMarket, computeIndicators, type MarketAnalysis } from "./indicators";
-import { getStock, STOCKS } from "./market-data";
+import { at, getStock, STOCKS } from "./market-data";
 import { runStrategy, type StrategySignal } from "./strategies";
 import type { ProposedTrade } from "./types";
 
@@ -77,7 +77,7 @@ export function planAgentRun(mode: AgentMode, equity: number): AgentPlan {
     }
   }
   if (best) return best;
-  const s = STOCKS[0];
+  const s = at(STOCKS, 0);
   const analysis = analyzeMarket(computeIndicators(s.history));
   return {
     mode,
