@@ -52,12 +52,14 @@ export function AppSidebar() {
               {items.map((item) => {
                 const active = pathname === item.url;
                 return (
-                  <SidebarMenuButton key={item.url} asChild isActive={active} tooltip={item.title} className="h-10">
-                    <Link to={item.url} onClick={() => setOpenMobile(false)}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton asChild isActive={active} tooltip={item.title} className="h-10">
+                      <Link to={item.url} onClick={() => setOpenMobile(false)}>
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                 );
               })}
             </SidebarMenu>
@@ -80,6 +82,3 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
-
-// Keep SidebarMenuItem import used for a11y list semantics in future additions.
-export const _MenuItem = SidebarMenuItem;
