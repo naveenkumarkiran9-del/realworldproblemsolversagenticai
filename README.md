@@ -1,26 +1,24 @@
-# Realworldproblemsolversagenticai
+# TradePilot AI
 
-Implement exactly the screenshot and nothing else
+**Intelligent Trading. Controlled Risk. Simulated Execution.**
 
-This project was built with [Lovable](https://lovable.dev).
+## About
+TradePilot AI is an AI-powered trading simulation dashboard designed to demonstrate trading strategies, risk management, and paper trading without using real money.
 
-**Live app**: https://realworldproblemsolversagenticai.lovable.app
+## Features
+- AI Strategy Lab
+- Market Analysis Dashboard
+- Paper Trading Simulation
+- Risk Management
+- Trade Journal
 
-## Build with Lovable
+## Technology
+- HTML
+- CSS
+- JavaScript
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/9679f911-8c7a-4948-a6eb-b65408de6392).
+## Team
+Hack4Hack Hackathon Team
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
-
-## Development
-
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
-
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
-```
+## Disclaimer
+This project is for educational and simulation purposes only. No real-money trading is performed.
