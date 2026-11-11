@@ -104,12 +104,12 @@ export function isDemoSymbol(symbol: string): boolean {
 }
 
 export function lastPrice(symbol: string): number {
-  return at(getStock(symbol).history, -1).close;
+  return priceOf(symbol);
 }
 
 export function dayChange(symbol: string): { abs: number; pct: number } {
   const h = getStock(symbol).history;
-  const a = at(h, -1).close;
+  const a = priceOf(symbol);
   const b = at(h, -2).close;
   return { abs: a - b, pct: ((a - b) / b) * 100 };
 }

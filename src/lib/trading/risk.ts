@@ -4,7 +4,7 @@ export const DEFAULT_LIMITS: RiskLimits = {
   maxRiskPerTradePct: 2,
   maxDailyLossPct: 3,
   maxExposurePct: 80,
-  maxPositionSizePct: 25,
+  maxPositionSizePct: 10,
   requireStopLoss: true,
 };
 
@@ -35,10 +35,12 @@ export function exposure(s: Pick<PortfolioSnapshot, "positions" | "prices">) {
 export function evaluateTrade(trade: ProposedTrade, snap: PortfolioSnapshot, limits: RiskLimits): RiskEvaluation {
   const checks: RiskCheck[] = [];
   const equity = portfolioEquity(snap);
+  const sizePctLimit = Math.min(10, limits.maxPositionSizePct);
+  const riskPctLimit = Math.min(2, limits.maxRiskPerTradePct);
   const add = (id: string, label: string, passed: boolean, detail: string) => checks.push({ id, label, passed, detail });
 
   const validInput =
-    Number.isFinite(trade.qty) && Number.isInteger(trade.qty) && trade.qty > 0 && Number.isFinite(trade.entryPrice) && trade.entryPrice > 0;
+    Number.isFinite(equity) && equity > 0 && Number.isFinite(trade.qty) && Number.isInteger(trade.qty) && trade.qty > 0 && Number.isFinite(trade.entryPrice) && trade.entryPrice > 0;
   add("input", "Order input is valid", validInput, validInput ? `${trade.qty} × ${trade.symbol} @ $${trade.entryPrice.toFixed(2)}` : "Quantity must be a whole number above 0 and price must be positive.");
 
   add("kill", "Kill switch is off", !snap.killSwitch, snap.killSwitch ? "Trading is paused by the kill switch. Resume manually to trade." : "Trading is enabled.");
@@ -56,15 +58,13 @@ export function evaluateTrade(trade: ProposedTrade, snap: PortfolioSnapshot, lim
   // 1. Stop-loss validity
   const hasStop = trade.stopLoss !== null && Number.isFinite(trade.stopLoss) && trade.stopLoss > 0;
   const stopBelow = hasStop && (trade.stopLoss as number) < trade.entryPrice;
-  const stopOk = limits.requireStopLoss ? hasStop && stopBelow : !hasStop || stopBelow;
+  const stopOk = hasStop && stopBelow;
   add(
     "stop",
     "Valid stop-loss",
     stopOk,
     !hasStop
-      ? limits.requireStopLoss
-        ? "No stop-loss provided, but the rules require one."
-        : "No stop-loss (allowed by current settings)."
+      ? "No stop-loss provided; every buy requires one below entry."
       : stopBelow
         ? `Stop at $${(trade.stopLoss as number).toFixed(2)} is below entry.`
         : `Stop at $${(trade.stopLoss as number).toFixed(2)} must be below the entry price.`,
@@ -72,8 +72,14 @@ export function evaluateTrade(trade: ProposedTrade, snap: PortfolioSnapshot, lim
 
   // 2. Risk per trade
   const riskAmount = hasStop && stopBelow ? (trade.entryPrice - (trade.stopLoss as number)) * trade.qty : notional;
-  const riskLimit = (limits.maxRiskPerTradePct / 100) * equity;
-  add("risk", `Risk per trade ≤ ${limits.maxRiskPerTradePct}%`, riskAmount <= riskLimit, `At risk ${usd(riskAmount)} vs limit ${usd(riskLimit)}.`);
+  const riskLimit = (riskPctLimit / 100) * equity;
+  add("risk", `Risk per trade < ${riskPctLimit}%`, riskAmount < riskLimit, `Risk is ${((riskAmount / equity) * 100).toFixed(2)}% of portfolio (${usd(riskAmount)}); limit is under ${riskPctLimit}% (${usd(riskLimit)}).`);
+
+  const reward = trade.takeProfit !== null && Number.isFinite(trade.takeProfit) ? trade.takeProfit - trade.entryPrice : 0;
+  const ratio = stopOk && reward > 0 ? reward / (trade.entryPrice - (trade.stopLoss as number)) : 0;
+  add("reward", "Reward-to-risk ≥ 1.5", ratio >= 1.5, stopOk && reward > 0
+    ? `Reward-to-risk is ${ratio.toFixed(2)}:1; minimum is 1.5:1.`
+    : "A valid stop-loss and take-profit above entry are needed to reach 1.5:1.");
 
   // 3. Daily loss
   const dailyLimit = (limits.maxDailyLossPct / 100) * equity;
@@ -81,8 +87,8 @@ export function evaluateTrade(trade: ProposedTrade, snap: PortfolioSnapshot, lim
 
   // 4. Position size
   const existing = snap.positions.filter((p) => p.symbol === trade.symbol).reduce((a, p) => a + p.qty * (snap.prices[p.symbol] ?? p.entryPrice), 0);
-  const posLimit = (limits.maxPositionSizePct / 100) * equity;
-  add("size", `Position size ≤ ${limits.maxPositionSizePct}%`, existing + notional <= posLimit, `${trade.symbol} position would be ${usd(existing + notional)} vs limit ${usd(posLimit)}.`);
+  const posLimit = (sizePctLimit / 100) * equity;
+  add("size", `Position size < ${sizePctLimit}%`, existing + notional < posLimit, `${trade.symbol} position is ${(((existing + notional) / equity) * 100).toFixed(2)}% of portfolio (${usd(existing + notional)}); limit is under ${sizePctLimit}% (${usd(posLimit)}).`);
 
   // 5. Exposure
   const exp = exposure(snap) + notional;
@@ -96,13 +102,14 @@ export function evaluateTrade(trade: ProposedTrade, snap: PortfolioSnapshot, lim
     kill: "Trade rejected: trading is paused by the kill switch.",
     stop: "Trade rejected: the trade does not have a valid stop-loss.",
     risk: "Trade rejected: proposed position exceeds the configured risk limit.",
+    reward: "Trade rejected: reward-to-risk is below 1.5:1.",
     daily: "Trade rejected: the daily loss limit has been reached.",
     size: "Trade rejected: position size exceeds the maximum allowed for one stock.",
     exposure: "Trade rejected: total portfolio exposure would exceed the configured limit.",
     cash: "Trade rejected: not enough virtual cash.",
   };
   const firstFail = checks.find((c) => !c.passed);
-  return finish(checks, firstFail ? reasons[firstFail.id] : undefined);
+  return finish(checks, firstFail ? `${reasons[firstFail.id]} ${firstFail.detail}` : undefined);
 }
 
 function finish(checks: RiskCheck[], rejection?: string): RiskEvaluation {

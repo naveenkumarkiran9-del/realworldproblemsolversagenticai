@@ -8,7 +8,7 @@ import { Delta, PageHeader, Panel, SimTag } from "@/components/page-header";
 import { StockChart } from "@/components/price-chart";
 import { compact, pct, shortDate, usd } from "@/lib/format";
 import { analyzeMarket, computeIndicators, smaSeries, type MarketAnalysis } from "@/lib/trading/indicators";
-import { DEMO_AS_OF, dayChange, getStock, STOCKS } from "@/lib/trading/market-data";
+import { DEMO_AS_OF, dayChange, getStock, priceOf, STOCKS } from "@/lib/trading/market-data";
 import { STRATEGY_NAMES } from "@/lib/trading/types";
 
 export const Route = createFileRoute("/market")({
@@ -18,6 +18,8 @@ export const Route = createFileRoute("/market")({
       { name: "description", content: "Searchable demo stock list, price charts, technical indicators and simulated AI market analysis." },
       { property: "og:title", content: "Market Analysis — TradePilot AI" },
       { property: "og:description", content: "Demo market data with technical indicators and a simulated AI market read." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: MarketPage,
@@ -84,7 +86,7 @@ function MarketPage() {
                       <div className="text-[11px] text-muted-foreground">{s.name}</div>
                     </div>
                     <div className="text-right">
-                      <div className="num text-sm font-medium">{usd(s.history.at(-1)?.close)}</div>
+                      <div className="num text-sm font-medium">{usd(priceOf(s.symbol))}</div>
                       <div className="text-[11px]">
                         <Delta value={ch.pct} />
                       </div>
@@ -107,7 +109,7 @@ function MarketPage() {
                   <Badge variant={trend === "Uptrend" ? "success" : trend === "Downtrend" ? "danger" : "muted"}>{trend}</Badge>
                 </div>
                 <div className="mt-1 flex items-baseline gap-3">
-                  <span className="num text-3xl font-semibold">{usd(ind.price)}</span>
+                  <span className="num text-3xl font-semibold">{usd(priceOf(symbol))}</span>
                   <span className={`num text-sm ${change.abs >= 0 ? "text-success" : "text-destructive"}`}>
                     {change.abs >= 0 ? "+" : "−"}
                     {Math.abs(change.abs).toFixed(2)} ({pct(change.pct)})

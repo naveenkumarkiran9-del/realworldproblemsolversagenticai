@@ -15,6 +15,8 @@ export const Route = createFileRoute("/journal")({
       { name: "description", content: "Every simulated trade decision with AI explanation, risk check result, and strategy performance summary." },
       { property: "og:title", content: "Trade Journal — TradePilot AI" },
       { property: "og:description", content: "Full audit trail of simulated trades and Risk Governor decisions." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: JournalPage,
@@ -33,15 +35,14 @@ const match = (j: JournalEntry, f: FilterId) =>
   f === "all" ? true : f === "accepted" ? j.decision === "Accepted" : f === "rejected" ? j.decision === "Rejected" : f === "profit" ? (j.pnl ?? 0) > 0 : j.pnl !== null && j.pnl < 0;
 
 function JournalPage() {
-  const { journal } = useTrading();
+  const { journal, totalPnl, tradeCount, decisionCount } = useTrading();
   const [filter, setFilter] = useState<FilterId>("all");
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<JournalEntry | null>(null);
 
   const rows = journal.filter((j) => match(j, filter) && (j.symbol + j.id).toLowerCase().includes(q.toLowerCase()));
-  const accepted = journal.filter((j) => j.decision === "Accepted").length;
-  const rejected = journal.length - accepted;
-  const totalPnl = journal.reduce((a, j) => a + (j.pnl ?? 0), 0);
+  const accepted = tradeCount;
+  const rejected = decisionCount - accepted;
 
   const byStrategy = useMemo(() => {
     const ids: StrategyId[] = ["trend", "meanrev", "manual"];
@@ -59,10 +60,10 @@ function JournalPage() {
       <PageHeader eyebrow="Trade Journal" title="Decision audit trail" description="Every simulated trade the agent or you proposed — including the ones the Risk Governor blocked." actions={<SimTag>Simulated P&L</SimTag>} />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="Total simulated trades" value={journal.length} />
+        <StatCard label="Total simulated trades" value={decisionCount} />
         <StatCard label="Accepted" tone="up" value={accepted} />
         <StatCard label="Rejected" tone="down" value={rejected} />
-        <StatCard label="Total simulated P&L" tone={totalPnl >= 0 ? "up" : "down"} value={signedUsd(totalPnl, 0)} sub="Realized, closed trades" />
+        <StatCard label="Total simulated P&L" tone={totalPnl >= 0 ? "up" : "down"} value={signedUsd(totalPnl, 0)} sub="Realized + unrealized" />
       </div>
 
       <Panel title="Strategy performance" subtitle="Realized simulated results by strategy">

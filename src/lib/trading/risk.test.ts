@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_LIMITS, evaluateTrade, type PortfolioSnapshot } from "./risk";
 import type { ProposedTrade } from "./types";
+import { planAgentRun } from "./scenarios";
+import { PRICE_MAP } from "./market-data";
 
 const snap = (over: Partial<PortfolioSnapshot> = {}): PortfolioSnapshot => ({
   cash: 100_000,
@@ -14,7 +16,7 @@ const snap = (over: Partial<PortfolioSnapshot> = {}): PortfolioSnapshot => ({
 const buy = (over: Partial<ProposedTrade> = {}): ProposedTrade => ({
   symbol: "AAPL",
   side: "BUY",
-  qty: 100,
+  qty: 50,
   entryPrice: 100,
   stopLoss: 95,
   takeProfit: 110,
@@ -23,8 +25,14 @@ const buy = (over: Partial<ProposedTrade> = {}): ProposedTrade => ({
 });
 
 describe("Risk Governor", () => {
+  it("keeps the compliant demo below 10% size, below 2% risk and at least 1.5 reward-to-risk", () => {
+    const trade = planAgentRun("A", 100_000).trade;
+    expect(trade).not.toBeNull();
+    if (!trade) throw new Error("Compliant scenario must propose a trade");
+    expect(evaluateTrade(trade, snap({ prices: PRICE_MAP }), DEFAULT_LIMITS).approved).toBe(true);
+  });
   it("approves a trade within every limit", () => {
-    // $10k position (10%), $500 at risk (0.5%)
+    // $5k position (5%), $250 at risk (0.25%)
     expect(evaluateTrade(buy(), snap(), DEFAULT_LIMITS).approved).toBe(true);
   });
 
@@ -51,11 +59,44 @@ describe("Risk Governor", () => {
     expect(r.explanation).toContain("daily loss limit");
   });
 
-  it("rejects a single position above 25% of equity", () => {
-    // 300 × $100 = $30k > $25k, risk 300 × $5 = $1.5k OK
-    const r = evaluateTrade(buy({ qty: 300 }), snap(), DEFAULT_LIMITS);
+  it("rejects a single position at the strict 10% equity boundary", () => {
+    const r = evaluateTrade(buy({ qty: 100 }), snap(), DEFAULT_LIMITS);
     expect(r.approved).toBe(false);
     expect(r.checks.find((c) => c.id === "size")?.passed).toBe(false);
+  });
+
+  it("counts existing shares toward the 10% position limit", () => {
+    const r = evaluateTrade(buy({ qty: 50 }), snap({ positions: [{ id: "old", symbol: "AAPL", qty: 60, entryPrice: 100, stopLoss: 95, takeProfit: 110, strategy: "manual", openedAt: "2026-11-01" }], cash: 94_000 }), DEFAULT_LIMITS);
+    expect(r.checks.find((c) => c.id === "size")?.passed).toBe(false);
+  });
+
+  it("rejects risk exactly at 2% of equity", () => {
+    const r = evaluateTrade(buy({ qty: 50, stopLoss: 60, takeProfit: 160 }), snap(), DEFAULT_LIMITS);
+    expect(r.checks.find((c) => c.id === "risk")?.passed).toBe(false);
+  });
+
+  it("requires a stop even when persisted settings disable it", () => {
+    const r = evaluateTrade(buy({ stopLoss: null }), snap(), { ...DEFAULT_LIMITS, requireStopLoss: false });
+    expect(r.checks.find((c) => c.id === "stop")?.passed).toBe(false);
+  });
+
+  it("rejects reward-to-risk below 1.5", () => {
+    const r = evaluateTrade(buy({ takeProfit: 107 }), snap(), DEFAULT_LIMITS);
+    expect(r.checks.find((c) => c.id === "reward")?.passed).toBe(false);
+  });
+
+  it("accepts reward-to-risk exactly 1.5", () => {
+    expect(evaluateTrade(buy({ takeProfit: 107.5 }), snap(), DEFAULT_LIMITS).approved).toBe(true);
+  });
+
+  it("rejects a missing target with a reward-to-risk reason", () => {
+    expect(evaluateTrade(buy({ takeProfit: null }), snap(), DEFAULT_LIMITS).checks.find((c) => c.id === "reward")?.passed).toBe(false);
+  });
+
+  it("cannot relax the 10% or 2% caps through settings", () => {
+    const r = evaluateTrade(buy({ qty: 200, stopLoss: 90 }), snap(), { ...DEFAULT_LIMITS, maxPositionSizePct: 100, maxRiskPerTradePct: 100 });
+    expect(r.checks.find((c) => c.id === "size")?.passed).toBe(false);
+    expect(r.checks.find((c) => c.id === "risk")?.passed).toBe(false);
   });
 
   it("rejects every trade while the kill switch is on", () => {
@@ -65,7 +106,7 @@ describe("Risk Governor", () => {
   });
 
   it("rejects when virtual cash is insufficient", () => {
-    const r = evaluateTrade(buy(), snap({ cash: 5_000 }), { ...DEFAULT_LIMITS, maxPositionSizePct: 100, maxExposurePct: 100 });
+    const r = evaluateTrade(buy(), snap({ cash: 4_000 }), { ...DEFAULT_LIMITS, maxPositionSizePct: 100, maxExposurePct: 100 });
     expect(r.checks.find((c) => c.id === "cash")?.passed).toBe(false);
     expect(r.approved).toBe(false);
   });

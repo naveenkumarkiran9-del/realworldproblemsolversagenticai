@@ -32,3 +32,5 @@ use the editor.
 ## Project rules
 - Demo trading logic lives in pure modules under `src/lib/trading/` (data, indicators, strategies, Risk Governor); UI state is a browser-only context store persisted to localStorage. Why: no backend needed for the paper-trading prototype, and the risk rules stay unit-testable.
 - Read demo prices with `priceOf()` / `at()` from `market-data.ts`, never raw index lookups. Why: an unknown symbol must show "—" and fail the Risk Governor's input check instead of crashing a page.
+- Derive balances, open lots, P&L, counts and journal order through the pure portfolio ledger module; ignore persisted balance caches so every page reflects the same trades.
+- Execute new demo orders at the shared current quote; apply mandatory entry checks to buys and holdings checks to risk-reducing sells so positions can be closed without opening new risk.

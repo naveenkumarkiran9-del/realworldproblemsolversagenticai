@@ -16,7 +16,7 @@ export interface AgentPlan {
 
 const SIZE_RISK_PCT = 0.01;
 
-function sizeQty(equity: number, entry: number, stop: number, maxPositionPct = 0.2) {
+function sizeQty(equity: number, entry: number, stop: number, maxPositionPct = 0.05) {
   const perShare = Math.max(entry - stop, 0.01);
   const byRisk = Math.floor((equity * SIZE_RISK_PCT) / perShare);
   const bySize = Math.floor((equity * maxPositionPct) / entry);
@@ -28,8 +28,9 @@ export function planAgentRun(mode: AgentMode, equity: number): AgentPlan {
   if (mode === "A") {
     const symbol = "AMZN";
     const analysis = analyzeMarket(computeIndicators(getStock(symbol).history));
-    const signal = runStrategy("meanrev", symbol);
-    const qty = sizeQty(equity, signal.entry, signal.stopLoss, 0.12);
+    const base = runStrategy("meanrev", symbol);
+    const signal = { ...base, takeProfit: Math.max(base.takeProfit, Math.ceil((base.entry + 1.5 * (base.entry - base.stopLoss)) * 100) / 100) };
+    const qty = sizeQty(equity, signal.entry, signal.stopLoss, 0.05);
     return {
       mode,
       symbol,
