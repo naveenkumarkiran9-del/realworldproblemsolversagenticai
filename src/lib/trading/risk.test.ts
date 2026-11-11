@@ -98,7 +98,7 @@ describe("Risk Governor", () => {
   });
 
   it("rejects when virtual cash is insufficient", () => {
-    const r = evaluateTrade(buy(), snap({ cash: 5_000 }), { ...DEFAULT_LIMITS, maxPositionSizePct: 100, maxExposurePct: 100 });
+    const r = evaluateTrade(buy(), snap({ cash: 4_000 }), { ...DEFAULT_LIMITS, maxPositionSizePct: 100, maxExposurePct: 100 });
     expect(r.checks.find((c) => c.id === "cash")?.passed).toBe(false);
     expect(r.approved).toBe(false);
   });
