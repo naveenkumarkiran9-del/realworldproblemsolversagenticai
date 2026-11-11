@@ -37,7 +37,7 @@ export function planAgentRun(mode: AgentMode, equity: number): AgentPlan {
       analysis: { ...analysis, strategy: "meanrev" },
       signal: { ...signal, signal: "BUY" },
       trade: { symbol, side: "BUY", qty, entryPrice: signal.entry, stopLoss: signal.stopLoss, takeProfit: signal.takeProfit, strategy: "meanrev" },
-      rationale: `Scenario A: ${symbol} dipped below its 20-day mean in a range-bound market. The agent sizes the position so only ~1% of equity is at risk, with a stop-loss ${(((signal.entry - signal.stopLoss) / signal.entry) * 100).toFixed(1)}% below entry.`,
+      rationale: `Scenario A is a controlled demonstration of an approved trade. A BUY proposal is supplied to test the Risk Governor's approval process. The position is sized to risk approximately 1% of equity, with a stop-loss ${(((signal.entry - signal.stopLoss) / signal.entry) * 100).toFixed(1)}% below entry.`,
     };
   }
 
