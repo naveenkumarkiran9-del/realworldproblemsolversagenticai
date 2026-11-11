@@ -105,8 +105,8 @@ function PaperTrading() {
         <StatCard label="Unrealized P&L" tone={t.unrealizedPnl >= 0 ? "up" : "down"} value={signedUsd(t.unrealizedPnl, 0)} sub="Open positions" />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[380px_1fr]">
-        <Panel title="Order ticket" subtitle="Validated by the Risk Governor">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[380px_minmax(0,1fr)]">
+        <Panel className="min-w-0" title="Order ticket" subtitle="Validated by the Risk Governor">
           {t.killSwitch ? (
             <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm">
               <div className="flex items-center gap-2 font-semibold text-destructive"><OctagonPause className="size-4" /> Trading paused</div>
@@ -172,7 +172,7 @@ function PaperTrading() {
           )}
         </Panel>
 
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <Panel title="Open simulated positions" subtitle="Marked to demo prices">
             {t.positions.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">No open positions. Submit a simulated buy to open one.</p>

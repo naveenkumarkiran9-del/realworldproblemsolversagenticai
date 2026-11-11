@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_LIMITS, evaluateTrade, type PortfolioSnapshot } from "./risk";
 import type { ProposedTrade } from "./types";
+import { planAgentRun } from "./scenarios";
+import { PRICE_MAP } from "./market-data";
 
 const snap = (over: Partial<PortfolioSnapshot> = {}): PortfolioSnapshot => ({
   cash: 100_000,
@@ -23,6 +25,12 @@ const buy = (over: Partial<ProposedTrade> = {}): ProposedTrade => ({
 });
 
 describe("Risk Governor", () => {
+  it("keeps the compliant demo below 10% size, below 2% risk and at least 1.5 reward-to-risk", () => {
+    const trade = planAgentRun("A", 100_000).trade;
+    expect(trade).not.toBeNull();
+    if (!trade) throw new Error("Compliant scenario must propose a trade");
+    expect(evaluateTrade(trade, snap({ prices: PRICE_MAP }), DEFAULT_LIMITS).approved).toBe(true);
+  });
   it("approves a trade within every limit", () => {
     // $5k position (5%), $250 at risk (0.25%)
     expect(evaluateTrade(buy(), snap(), DEFAULT_LIMITS).approved).toBe(true);

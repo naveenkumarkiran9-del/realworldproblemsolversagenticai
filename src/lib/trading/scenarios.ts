@@ -28,7 +28,8 @@ export function planAgentRun(mode: AgentMode, equity: number): AgentPlan {
   if (mode === "A") {
     const symbol = "AMZN";
     const analysis = analyzeMarket(computeIndicators(getStock(symbol).history));
-    const signal = runStrategy("meanrev", symbol);
+    const base = runStrategy("meanrev", symbol);
+    const signal = { ...base, takeProfit: Math.max(base.takeProfit, Math.ceil((base.entry + 1.5 * (base.entry - base.stopLoss)) * 100) / 100) };
     const qty = sizeQty(equity, signal.entry, signal.stopLoss, 0.05);
     return {
       mode,
