@@ -17,12 +17,12 @@ export function RiskChecksList({ checks, compact = false }: { checks: RiskCheck[
   );
 }
 
-export function DecisionBanner({ evaluation }: { evaluation: RiskEvaluation }) {
+export function DecisionBanner({ evaluation, preview = false }: { evaluation: RiskEvaluation; preview?: boolean }) {
   return (
     <div className={`flex items-start gap-3 rounded-xl border p-4 ${evaluation.approved ? "border-success/35 bg-success/10" : "border-destructive/40 bg-destructive/10"}`}>
       {evaluation.approved ? <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-success" /> : <XCircle className="mt-0.5 size-5 shrink-0 text-destructive" />}
       <div>
-        <div className={`font-display font-semibold ${evaluation.approved ? "text-success" : "text-destructive"}`}>{evaluation.approved ? "APPROVED — Paper trade executed" : "REJECTED — Trade blocked"}</div>
+        <div className={`font-display font-semibold ${evaluation.approved ? "text-success" : "text-destructive"}`}>{evaluation.approved ? (preview ? "PASS — Proposed plan meets risk limits" : "APPROVED — Paper trade executed") : (preview ? "FAIL — Proposed plan blocked" : "REJECTED — Trade blocked")}</div>
         <p className="mt-0.5 text-sm text-foreground/90">{evaluation.explanation}</p>
       </div>
     </div>

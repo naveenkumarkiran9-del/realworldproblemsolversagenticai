@@ -6,6 +6,7 @@ import { PageHeader, Panel, SimTag, StatCard } from "@/components/page-header";
 import { StatusBadge, TradeDetailDialog } from "@/components/trade-detail-dialog";
 import { dateTime, signedUsd, usd } from "@/lib/format";
 import { useTrading } from "@/lib/trading/store";
+import { derivePortfolio } from "@/lib/trading/portfolio";
 import { STRATEGY_NAMES, type JournalEntry, type StrategyId } from "@/lib/trading/types";
 
 export const Route = createFileRoute("/journal")({
@@ -48,9 +49,8 @@ function JournalPage() {
     const ids: StrategyId[] = ["trend", "meanrev", "manual"];
     return ids.map((id) => {
       const list = journal.filter((j) => j.strategy === id);
-      const closed = list.filter((j) => j.pnl !== null);
-      const wins = closed.filter((j) => (j.pnl as number) > 0).length;
-      return { id, trades: list.length, rejected: list.filter((j) => j.decision === "Rejected").length, closed: closed.length, winRate: closed.length ? (wins / closed.length) * 100 : 0, pnl: closed.reduce((a, j) => a + (j.pnl as number), 0) };
+      const ledger = derivePortfolio(list);
+      return { id, trades: ledger.decisionCount, rejected: ledger.decisionCount - ledger.tradeCount, winRate: ledger.winRate, pnl: ledger.realizedPnl };
     }).filter((s) => s.trades > 0);
   }, [journal]);
   const maxAbs = Math.max(1, ...byStrategy.map((s) => Math.abs(s.pnl)));

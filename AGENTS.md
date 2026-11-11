@@ -34,3 +34,4 @@ use the editor.
 - Read demo prices with `priceOf()` / `at()` from `market-data.ts`, never raw index lookups. Why: an unknown symbol must show "—" and fail the Risk Governor's input check instead of crashing a page.
 - Derive balances, open lots, P&L, counts and journal order through the pure portfolio ledger module; ignore persisted balance caches so every page reflects the same trades.
 - Execute new demo orders at the shared current quote; apply mandatory entry checks to buys and holdings checks to risk-reducing sells so positions can be closed without opening new risk.
+- Build strategy market fit and sized long plans in a pure analysis module; preview and direct submission use the shared Risk Governor, and submission alone writes the journal so analysis cannot create duplicate orders.

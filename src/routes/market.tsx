@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Delta, PageHeader, Panel, SimTag } from "@/components/page-header";
 import { StockChart } from "@/components/price-chart";
-import { compact, pct, shortDate, usd } from "@/lib/format";
+import { compact, fullDate, pct, usd } from "@/lib/format";
 import { analyzeMarket, computeIndicators, smaSeries, type MarketAnalysis } from "@/lib/trading/indicators";
 import { DEMO_AS_OF, dayChange, getStock, priceOf, STOCKS } from "@/lib/trading/market-data";
 import { STRATEGY_NAMES } from "@/lib/trading/types";
@@ -64,7 +64,7 @@ function MarketPage() {
       <PageHeader
         eyebrow="Market Analysis"
         title="Demo market explorer"
-        description={`Synthetic prices generated for this demo, as of ${shortDate(DEMO_AS_OF)}. They do not represent live or historical market conditions.`}
+        description={`Synthetic prices generated for this demo, as of ${fullDate(DEMO_AS_OF)}. They do not represent live or historical market conditions.`}
         actions={<SimTag>Demo data</SimTag>}
       />
 
