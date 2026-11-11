@@ -1,9 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { at, getStock, PRICE_MAP, priceOf } from "./market-data";
-import { DEFAULT_LIMITS, evaluateTrade, exposure, portfolioEquity } from "./risk";
+import { DEFAULT_LIMITS, evaluateTrade } from "./risk";
+import { derivePortfolio, STARTING_CAPITAL } from "./portfolio";
+export { STARTING_CAPITAL } from "./portfolio";
 import type { JournalEntry, Position, ProposedTrade, RiskEvaluation, RiskLimits, StrategyId } from "./types";
 
-export const STARTING_CAPITAL = 100_000;
 const STORAGE_KEY = "tradepilot-demo-v1";
 
 interface DemoState {
@@ -42,15 +43,15 @@ interface Seed {
 }
 
 const SEEDS: Seed[] = [
-  { symbol: "MSFT", strategy: "trend", qty: 25, entryBack: 70, exitBack: 52, why: "20/50-day crossover confirmed with rising volume." },
-  { symbol: "AMZN", strategy: "meanrev", qty: 60, entryBack: 64, exitBack: 58, why: "Price stretched 1.8σ below its 20-day mean." },
-  { symbol: "TSLA", strategy: "trend", qty: 30, entryBack: 55, exitBack: 47, why: "Short-lived breakout above the 20-day average." },
-  { symbol: "NVDA", strategy: "trend", qty: 80, entryBack: 50, exitBack: 31, why: "Strong uptrend; price held above both moving averages." },
-  { symbol: "JPM", strategy: "meanrev", qty: 40, entryBack: 42, exitBack: 36, why: "Oversold reading (RSI 31) in a stable range." },
-  { symbol: "GOOGL", strategy: "meanrev", qty: 50, entryBack: 34, exitBack: 27, why: "Pullback to lower band in sideways market." },
-  { symbol: "META", strategy: "trend", qty: 12, entryBack: 28, exitBack: 19, why: "Higher highs with 20-day average sloping up." },
-  { symbol: "AAPL", strategy: "trend", qty: 40, entryBack: 15, why: "Trend continuation entry after a shallow pullback." },
-  { symbol: "MSFT", strategy: "trend", qty: 18, entryBack: 9, why: "Persistent uptrend with low volatility." },
+  { symbol: "MSFT", strategy: "trend", qty: 15, entryBack: 70, exitBack: 52, why: "20/50-day crossover confirmed with rising volume." },
+  { symbol: "AMZN", strategy: "meanrev", qty: 35, entryBack: 64, exitBack: 58, why: "Price stretched 1.8σ below its 20-day mean." },
+  { symbol: "TSLA", strategy: "trend", qty: 20, entryBack: 55, exitBack: 47, why: "Short-lived breakout above the 20-day average." },
+  { symbol: "NVDA", strategy: "trend", qty: 40, entryBack: 50, exitBack: 31, why: "Strong uptrend; price held above both moving averages." },
+  { symbol: "JPM", strategy: "meanrev", qty: 25, entryBack: 42, exitBack: 36, why: "Oversold reading (RSI 31) in a stable range." },
+  { symbol: "GOOGL", strategy: "meanrev", qty: 30, entryBack: 34, exitBack: 27, why: "Pullback to lower band in sideways market." },
+  { symbol: "META", strategy: "trend", qty: 8, entryBack: 28, exitBack: 19, why: "Higher highs with 20-day average sloping up." },
+  { symbol: "AAPL", strategy: "trend", qty: 20, entryBack: 15, why: "Trend continuation entry after a shallow pullback." },
+  { symbol: "MSFT", strategy: "trend", qty: 10, entryBack: 9, why: "Persistent uptrend with low volatility." },
 ];
 
 function seedState(): DemoState {
@@ -63,6 +64,8 @@ function seedState(): DemoState {
     const exit = s.exitBack !== undefined ? closeAt(s.symbol, s.exitBack) : null;
     const stop = Math.round(entry.close * 0.95 * 100) / 100;
     const tp = Math.round(entry.close * 1.1 * 100) / 100;
+    const evaluation = evaluateTrade({ symbol: s.symbol, side: "BUY", qty: s.qty, entryPrice: entry.close, stopLoss: stop, takeProfit: tp, strategy: s.strategy },
+      { cash, positions, prices: PRICE_MAP, dailyLoss: 0, killSwitch: false }, DEFAULT_LIMITS);
     const pnl = exit ? Math.round((exit.close - entry.close) * s.qty * 100) / 100 : null;
     if (exit) cash += pnl as number;
     else {
@@ -84,8 +87,8 @@ function seedState(): DemoState {
       status: exit ? "Closed" : "Open",
       decision: "Accepted",
       aiExplanation: s.why,
-      riskResult: "Approved — all 8 risk checks passed.",
-      checks: [],
+      riskResult: evaluation.explanation,
+      checks: evaluation.checks,
       closedAt: exit ? `${exit.date}T20:00:00.000Z` : null,
       source: "AI Agent",
     });
@@ -133,6 +136,11 @@ function seedState(): DemoState {
     closedAt: null,
     source: "AI Agent",
   });
+  for (const j of journal.filter((row) => row.decision === "Rejected")) {
+    const evaluation = evaluateTrade(j, { cash, positions, prices: PRICE_MAP, dailyLoss: 0, killSwitch: false }, DEFAULT_LIMITS);
+    j.checks = evaluation.checks;
+    j.riskResult = evaluation.explanation;
+  }
   return {
     cash: Math.round(cash * 100) / 100,
     positions,
@@ -190,7 +198,12 @@ export function TradingProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) setState({ ...seedState(), ...(JSON.parse(raw) as DemoState) });
+      if (raw) {
+        const saved = { ...seedState(), ...(JSON.parse(raw) as DemoState) };
+        saved.limits = { ...saved.limits, maxPositionSizePct: Math.min(10, saved.limits.maxPositionSizePct), maxRiskPerTradePct: Math.min(2, saved.limits.maxRiskPerTradePct), requireStopLoss: true };
+        const portfolio = derivePortfolio(saved.journal);
+        setState({ ...saved, ...portfolio });
+      }
     } catch {
       /* ignore corrupt demo storage */
     }
@@ -209,12 +222,16 @@ export function TradingProvider({ children }: { children: ReactNode }) {
     return Math.max(0, -net);
   };
 
-  const snapshot = (s: DemoState) => ({ cash: s.cash, positions: s.positions, prices, dailyLoss: dailyLossOf(s), killSwitch: s.killSwitch });
+  const snapshot = (s: DemoState) => {
+    const p = derivePortfolio(s.journal);
+    return { cash: p.cash, positions: p.positions, prices, dailyLoss: dailyLossOf({ ...s, journal: p.journal }), killSwitch: s.killSwitch };
+  };
 
-  const previewTrade = useCallback((trade: ProposedTrade) => evaluateTrade(trade, snapshot(stateRef.current), stateRef.current.limits), []); // eslint-disable-line react-hooks/exhaustive-deps
+  const previewTrade = useCallback((trade: ProposedTrade) => evaluateTrade({ ...trade, entryPrice: priceOf(trade.symbol) }, snapshot(stateRef.current), stateRef.current.limits), []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const submitTrade = useCallback((trade: ProposedTrade, meta: SubmitMeta) => {
-    const s = stateRef.current;
+  const submitTrade = useCallback((proposed: ProposedTrade, meta: SubmitMeta) => {
+    const trade = { ...proposed, entryPrice: priceOf(proposed.symbol) };
+    const s = { ...stateRef.current, ...derivePortfolio(stateRef.current.journal) };
     const evaluation = evaluateTrade(trade, snapshot(s), s.limits);
     const now = new Date().toISOString();
     const id = `T-${s.nextId}`;
@@ -262,8 +279,9 @@ export function TradingProvider({ children }: { children: ReactNode }) {
       next.journal = journal;
       next.cash = Math.round((s.cash + trade.qty * trade.entryPrice) * 100) / 100;
     }
-    setState(next);
-    stateRef.current = next;
+    const reconciled = { ...next, ...derivePortfolio(next.journal) };
+    setState(reconciled);
+    stateRef.current = reconciled;
     return { evaluation, entryId: id };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -280,29 +298,18 @@ export function TradingProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo<TradingContextValue>(() => {
-    const equity = portfolioEquity({ cash: state.cash, positions: state.positions, prices });
-    const invested = exposure({ positions: state.positions, prices });
-    const closed = state.journal.filter((j) => j.status === "Closed" && j.pnl !== null);
-    const realizedPnl = closed.reduce((a, j) => a + (j.pnl as number), 0);
-    const unrealizedPnl = state.positions.reduce((a, p) => a + ((prices[p.symbol] ?? p.entryPrice) - p.entryPrice) * p.qty, 0);
-    const wins = closed.filter((j) => (j.pnl as number) > 0).length;
+    const portfolio = derivePortfolio(state.journal);
     return {
       ...state,
+      ...portfolio,
       prices,
-      equity,
-      invested,
-      totalPnl: equity - STARTING_CAPITAL,
-      realizedPnl,
-      unrealizedPnl,
-      dailyLoss: dailyLossOf(state),
-      winRate: closed.length ? (wins / closed.length) * 100 : 0,
-      tradeCount: state.journal.filter((j) => j.decision === "Accepted").length,
+      dailyLoss: dailyLossOf({ ...state, journal: portfolio.journal }),
       draft,
       setDraft,
       submitTrade,
       previewTrade,
       closePosition,
-      setLimits: (limits) => setState((s) => ({ ...s, limits })),
+      setLimits: (limits) => setState((s) => ({ ...s, limits: { ...limits, maxRiskPerTradePct: Math.min(2, limits.maxRiskPerTradePct), maxPositionSizePct: Math.min(10, limits.maxPositionSizePct), requireStopLoss: true } })),
       setKillSwitch: (on) => setState((s) => ({ ...s, killSwitch: on })),
       resetDemo: () => {
         const fresh = seedState();
