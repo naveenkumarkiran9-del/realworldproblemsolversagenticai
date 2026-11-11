@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { DEMO_AS_OF } from "@/lib/trading/market-data";
 import { useTrading } from "@/lib/trading/store";
-import { shortDate } from "@/lib/format";
+import { fullDate } from "@/lib/format";
 
 export function AppHeader() {
   const { killSwitch, resetDemo } = useTrading();
@@ -28,7 +28,7 @@ export function AppHeader() {
           <span className="inline-flex items-center gap-1.5 rounded-full border border-warning/30 bg-warning/10 px-2.5 py-1 font-semibold text-warning">
             <FlaskConical className="size-3.5" /> SIMULATED · DEMO DATA
           </span>
-          <span className="hidden lg:inline">Prices are synthetic, as of {shortDate(DEMO_AS_OF)} — not live market data.</span>
+          <span className="hidden lg:inline">Prices are synthetic, as of {fullDate(DEMO_AS_OF)} — not live market data.</span>
         </div>
         <div className="ml-auto flex items-center gap-2">
           {killSwitch && (
@@ -64,6 +64,9 @@ export function AppHeader() {
           </AlertDialog>
         </div>
       </header>
+      <div className="border-b border-warning/30 bg-warning/10 px-3 py-2 text-center text-xs text-warning lg:hidden">
+        SIMULATED · Synthetic demo prices as of {fullDate(DEMO_AS_OF)} — not live market data.
+      </div>
       {killSwitch && (
         <div className="border-b border-destructive/30 bg-destructive/10 px-5 py-2 text-center text-sm text-destructive">
           Trading is paused by the kill switch. New simulated trades are blocked until you{" "}

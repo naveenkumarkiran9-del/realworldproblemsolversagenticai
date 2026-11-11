@@ -37,7 +37,7 @@ function PaperTrading() {
   const [stop, setStop] = useState(String(Math.round(priceOf("AAPL") * 0.96 * 100) / 100));
   const [tp, setTp] = useState(String(Math.round(priceOf("AAPL") * 1.08 * 100) / 100));
   const [strategy, setStrategy] = useState<StrategyId>("manual");
-  const [result, setResult] = useState<RiskEvaluation | null>(null);
+  const [result, setResult] = useState<RiskEvaluation | null>(t.lastEvaluation?.evaluation ?? null);
 
   const applySymbol = (s: string) => {
     // The dropdown can report an empty value (e.g. on form reset); ignore anything that isn't a demo stock.
@@ -59,7 +59,7 @@ function PaperTrading() {
     setTp(String(t.draft.takeProfit));
     setStrategy(t.draft.strategy);
     const perShare = Math.max(t.draft.entryPrice - t.draft.stopLoss, 0.01);
-    setQty(String(Math.max(1, Math.min(Math.floor((t.equity * 0.01) / perShare), Math.floor((t.equity * 0.05) / t.draft.entryPrice)))));
+    setQty(String(t.draft.qty ?? Math.max(1, Math.min(Math.floor((t.equity * 0.01) / perShare), Math.floor((t.equity * 0.05) / t.draft.entryPrice)))));
     toast.info(`Ticket pre-filled from Strategy Lab: ${t.draft.symbol}`);
     t.setDraft(null);
   }, [t.draft]); // eslint-disable-line react-hooks/exhaustive-deps
