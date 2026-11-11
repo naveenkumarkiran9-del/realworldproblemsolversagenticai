@@ -169,6 +169,7 @@ interface TradingContextValue extends DemoState {
   dailyLoss: number;
   winRate: number;
   tradeCount: number;
+  decisionCount: number;
   draft: DraftOrder | null;
   setDraft: (d: DraftOrder | null) => void;
   submitTrade: (trade: ProposedTrade, meta: SubmitMeta) => { evaluation: RiskEvaluation; entryId: string };
