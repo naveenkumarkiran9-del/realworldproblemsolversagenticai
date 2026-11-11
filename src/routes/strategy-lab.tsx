@@ -18,6 +18,8 @@ export const Route = createFileRoute("/strategy-lab")({
       { name: "description", content: "Compare trend following and mean reversion, then run a simulated strategy analysis with entry, stop-loss and take-profit." },
       { property: "og:title", content: "AI Strategy Lab — TradePilot AI" },
       { property: "og:description", content: "Select a strategy and generate a simulated trading signal on demo data." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: StrategyLab,

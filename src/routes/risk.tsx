@@ -32,16 +32,18 @@ export const Route = createFileRoute("/risk")({
       { name: "description", content: "Configure demo risk limits, inspect Risk Governor decisions and pause all simulated trading with a kill switch." },
       { property: "og:title", content: "Risk Management — TradePilot AI" },
       { property: "og:description", content: "Risk Governor, configurable limits and a working kill switch." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: RiskPage,
 });
 
 const SLIDERS: { key: keyof Omit<RiskLimits, "requireStopLoss">; label: string; hint: string; min: number; max: number; step: number }[] = [
-  { key: "maxRiskPerTradePct", label: "Maximum risk per trade", hint: "Loss to stop-loss, % of portfolio", min: 0.5, max: 10, step: 0.5 },
+  { key: "maxRiskPerTradePct", label: "Maximum risk per trade", hint: "Loss to stop-loss, % of portfolio", min: 0.5, max: 2, step: 0.5 },
   { key: "maxDailyLossPct", label: "Maximum daily loss", hint: "Realized loss today, % of portfolio", min: 1, max: 10, step: 0.5 },
   { key: "maxExposurePct", label: "Maximum portfolio exposure", hint: "Total invested, % of portfolio", min: 10, max: 100, step: 5 },
-  { key: "maxPositionSizePct", label: "Maximum position size", hint: "One stock, % of portfolio", min: 5, max: 100, step: 5 },
+  { key: "maxPositionSizePct", label: "Maximum position size", hint: "One stock, % of portfolio", min: 5, max: 10, step: 1 },
 ];
 
 function RiskPage() {
@@ -56,8 +58,9 @@ function RiskPage() {
   ];
 
   const test = (kind: "ok" | "big" | "nostop") => {
-    const a = planAgentRun("A", t.equity).trade!;
-    const b = planAgentRun("B", t.equity).trade!;
+    const a = planAgentRun("A", t.equity).trade;
+    const b = planAgentRun("B", t.equity).trade;
+    if (!a || !b) return;
     const map = {
       ok: { label: "Compliant trade (Scenario A)", trade: a },
       big: { label: "Oversized trade (Scenario B)", trade: b },
@@ -146,7 +149,7 @@ function RiskPage() {
                 <div className="text-sm font-medium">Stop-loss requirement</div>
                 <div className="text-[11px] text-muted-foreground">Every buy must include a stop below entry</div>
               </div>
-              <Switch aria-label="Require stop-loss" checked={t.limits.requireStopLoss} onCheckedChange={(v) => t.setLimits({ ...t.limits, requireStopLoss: v })} />
+              <Switch aria-label="Require stop-loss" checked disabled />
             </div>
           </div>
         </Panel>

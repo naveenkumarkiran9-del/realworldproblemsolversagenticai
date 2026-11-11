@@ -6,7 +6,7 @@ import { Delta, PageHeader, Panel, SimTag, StatCard } from "@/components/page-he
 import { EquityChart, Sparkline } from "@/components/price-chart";
 import { StatusBadge } from "@/components/trade-detail-dialog";
 import { dateTime, pct, signedUsd, usd } from "@/lib/format";
-import { dayChange, equityCurve, STOCKS } from "@/lib/trading/market-data";
+import { dayChange, equityCurve, priceOf, STOCKS } from "@/lib/trading/market-data";
 import { STARTING_CAPITAL, useTrading } from "@/lib/trading/store";
 
 export const Route = createFileRoute("/")({
@@ -16,6 +16,8 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "Simulated portfolio, AI agent status and one-click AI analysis for the TradePilot AI paper-trading demo." },
       { property: "og:title", content: "Overview — TradePilot AI" },
       { property: "og:description", content: "Intelligent Trading. Controlled Risk. Simulated Execution." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Overview,
@@ -115,7 +117,7 @@ function Overview() {
           <ul className="divide-y">
             {STOCKS.slice(0, 6).map((s) => {
               const ch = dayChange(s.symbol);
-              const last = s.history.at(-1)?.close;
+              const last = priceOf(s.symbol);
               return (
                 <li key={s.symbol} className="flex items-center gap-3 py-2">
                   <div className="w-16">

@@ -1,5 +1,5 @@
 import { computeIndicators } from "./indicators";
-import { getStock } from "./market-data";
+import { getStock, priceOf } from "./market-data";
 import type { StrategyId } from "./types";
 
 export interface StrategyInfo {
@@ -55,7 +55,7 @@ const r2 = (v: number) => Math.round(v * 100) / 100;
 
 export function runStrategy(id: Exclude<StrategyId, "manual">, symbol: string): StrategySignal {
   const ind = computeIndicators(getStock(symbol).history);
-  const entry = ind.price;
+  const entry = priceOf(symbol);
 
   if (id === "trend") {
     const spread = ((ind.sma20 - ind.sma50) / ind.sma50) * 100;

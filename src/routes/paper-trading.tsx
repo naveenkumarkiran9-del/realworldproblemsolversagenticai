@@ -21,6 +21,8 @@ export const Route = createFileRoute("/paper-trading")({
       { name: "description", content: "Place simulated buy and sell orders with virtual cash. Every order is checked by the Risk Governor. Paper trading only." },
       { property: "og:title", content: "Paper Trading — TradePilot AI" },
       { property: "og:description", content: "Simulated order ticket with virtual cash, positions and risk checks." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: PaperTrading,
@@ -36,7 +38,6 @@ function PaperTrading() {
   const [tp, setTp] = useState(String(Math.round(priceOf("AAPL") * 1.08 * 100) / 100));
   const [strategy, setStrategy] = useState<StrategyId>("manual");
   const [result, setResult] = useState<RiskEvaluation | null>(null);
-  const [errors, setErrors] = useState<string[]>([]);
 
   const applySymbol = (s: string) => {
     // The dropdown can report an empty value (e.g. on form reset); ignore anything that isn't a demo stock.
@@ -58,7 +59,7 @@ function PaperTrading() {
     setTp(String(t.draft.takeProfit));
     setStrategy(t.draft.strategy);
     const perShare = Math.max(t.draft.entryPrice - t.draft.stopLoss, 0.01);
-    setQty(String(Math.max(1, Math.min(Math.floor((t.equity * 0.01) / perShare), Math.floor((t.equity * 0.2) / t.draft.entryPrice)))));
+    setQty(String(Math.max(1, Math.min(Math.floor((t.equity * 0.01) / perShare), Math.floor((t.equity * 0.05) / t.draft.entryPrice)))));
     toast.info(`Ticket pre-filled from Strategy Lab: ${t.draft.symbol}`);
     t.setDraft(null);
   }, [t.draft]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -73,16 +74,6 @@ function PaperTrading() {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    const errs: string[] = [];
-    if (!Number.isInteger(nQty) || nQty <= 0) errs.push("Quantity must be a whole number greater than 0.");
-    if (!Number.isFinite(nEntry) || nEntry <= 0) errs.push("Entry price must be a positive number.");
-    if (side === "BUY" && nStop !== null && (!Number.isFinite(nStop) || nStop <= 0)) errs.push("Stop-loss must be a positive number.");
-    if (side === "BUY" && nTp !== null && (!Number.isFinite(nTp) || nTp <= nEntry)) errs.push("Take-profit must be above the entry price.");
-    setErrors(errs);
-    if (errs.length) {
-      setResult(null);
-      return;
-    }
     const { evaluation } = t.submitTrade(
       { symbol, side, qty: nQty, entryPrice: nEntry, stopLoss: side === "BUY" ? nStop : null, takeProfit: side === "BUY" ? nTp : null, strategy },
       { source: "Manual", aiExplanation: strategy === "manual" ? "Manual order placed by the user on the paper-trading ticket." : `Order drafted from the ${STRATEGY_NAMES[strategy]} signal in the AI Strategy Lab.` },
@@ -145,12 +136,12 @@ function PaperTrading() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <Field id="qty" label="Quantity" value={qty} onChange={setQty} step="1" />
-                <Field id="entry" label="Simulated entry price" value={entry} onChange={setEntry} />
+                <Field id="entry" label="Simulated entry price" value={entry} onChange={setEntry} readOnly />
               </div>
               {side === "BUY" && (
                 <div className="grid grid-cols-2 gap-3">
                   <Field id="stop" label="Stop-loss" value={stop} onChange={setStop} placeholder="Required" />
-                  <Field id="tp" label="Take-profit" value={tp} onChange={setTp} placeholder="Optional" />
+                  <Field id="tp" label="Take-profit" value={tp} onChange={setTp} placeholder="Required for 1.5:1" />
                 </div>
               )}
               <div className="space-y-1 rounded-lg border bg-surface/50 p-3 text-sm">
@@ -158,16 +149,21 @@ function PaperTrading() {
                 {side === "BUY" && <Row k="Capital at risk" v={atRisk !== null ? usd(atRisk) : "No valid stop"} tone={atRisk === null ? "text-destructive" : ""} />}
                 <Row k="Strategy" v={STRATEGY_NAMES[strategy]} />
               </div>
-              {errors.length > 0 && (
-                <ul className="space-y-1 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-                  {errors.map((e) => <li key={e}>• {e}</li>)}
-                </ul>
-              )}
               <Button type="submit" variant={side === "BUY" ? "success" : "sell"} className="w-full" size="lg">
                 Submit simulated {side === "BUY" ? "buy" : "sell"}
               </Button>
             </form>
           )}
+          <Button type="button" variant="outline" className="mt-3 w-full" onClick={() => {
+            const price = priceOf(symbol);
+            const riskyQty = Math.max(1, Math.ceil(t.equity * 0.14 / price));
+            const { evaluation } = t.submitTrade(
+              { symbol, side: "BUY", qty: riskyQty, entryPrice: price, stopLoss: price * 0.96, takeProfit: price * 1.08, strategy: "manual" },
+              { source: "Manual", aiExplanation: "Risky-trade demo: deliberately proposing a position of at least 14% of portfolio to demonstrate rejection." },
+            );
+            setResult(evaluation);
+            toast.error("Risky trade rejected", { description: evaluation.explanation });
+          }}><ShieldAlert /> Try a risky trade</Button>
           {result && (
             <div className="mt-4 space-y-3 animate-in fade-in">
               <DecisionBanner evaluation={result} />
@@ -253,11 +249,11 @@ function PaperTrading() {
   );
 }
 
-function Field({ id, label, value, onChange, placeholder, step = "0.01" }: { id: string; label: string; value: string; onChange: (v: string) => void; placeholder?: string; step?: string }) {
+function Field({ id, label, value, onChange, placeholder, step = "0.01", readOnly = false }: { id: string; label: string; value: string; onChange: (v: string) => void; placeholder?: string; step?: string; readOnly?: boolean }) {
   return (
     <div className="space-y-1.5">
       <Label htmlFor={id} className="text-xs">{label}</Label>
-      <Input id={id} type="number" inputMode="decimal" step={step} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className="num" />
+      <Input id={id} type="number" inputMode="decimal" step={step} value={value} readOnly={readOnly} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className="num" />
     </div>
   );
 }
